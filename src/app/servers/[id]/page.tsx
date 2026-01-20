@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,14 @@ export default function ServerDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
+
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const maxReconnectAttempts = 10;
+  const baseDelay = 1000; // 1 second
+  const maxDelay = 30000; // 30 seconds
 
   useEffect(() => {
     async function loadServer() {
@@ -63,27 +71,71 @@ export default function ServerDetailPage() {
     loadServer();
   }, [serverId]);
 
-  useEffect(() => {
-    if (!server) return;
+  const connectSSE = useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
 
-    // Use SSE via proxy
     const eventSource = new EventSource(`/api/servers/${serverId}/proxy/api/events`);
+    eventSourceRef.current = eventSource;
 
     eventSource.addEventListener("metrics", (event) => {
       try {
         const data = JSON.parse(event.data);
         setMetrics(data);
+        // Reset reconnection state on successful data
+        setIsReconnecting(false);
+        setReconnectAttempt(0);
+        setError(null);
       } catch (e) {
         console.error("Failed to parse metrics:", e);
       }
     });
 
     eventSource.onerror = () => {
-      setError("Connection lost");
+      eventSource.close();
+      eventSourceRef.current = null;
+
+      setReconnectAttempt((prev) => {
+        const newAttempt = prev + 1;
+        if (newAttempt >= maxReconnectAttempts) {
+          setIsReconnecting(false);
+          setError("Connection lost");
+          return prev;
+        }
+
+        setIsReconnecting(true);
+        const delay = Math.min(baseDelay * Math.pow(2, prev), maxDelay);
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connectSSE();
+        }, delay);
+
+        return newAttempt;
+      });
     };
 
-    return () => eventSource.close();
-  }, [server, serverId]);
+    eventSource.onopen = () => {
+      setIsReconnecting(false);
+      setReconnectAttempt(0);
+      setError(null);
+    };
+  }, [serverId]);
+
+  useEffect(() => {
+    if (!server) return;
+
+    connectSSE();
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+    };
+  }, [server, connectSSE]);
 
   if (isLoading) {
     return (
@@ -101,9 +153,19 @@ export default function ServerDetailPage() {
   }
 
   const handleRefresh = async () => {
+    // Clear any pending reconnection
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
     setIsRefreshing(true);
     setError(null);
     setIsLoading(true);
+    setReconnectAttempt(0);
+    setIsReconnecting(false);
 
     try {
       const res = await fetch(`/api/servers/${serverId}`);
@@ -199,6 +261,16 @@ export default function ServerDetailPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Reconnecting Banner */}
+        {isReconnecting && (
+          <div className="mb-4 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center gap-3">
+            <RefreshCw className="h-4 w-4 text-yellow-500 animate-spin" />
+            <span className="text-sm text-yellow-500">
+              Reconnecting... (attempt {reconnectAttempt}/{maxReconnectAttempts})
+            </span>
+          </div>
+        )}
+
         {/* Server Info */}
         {metrics && (
           <>
