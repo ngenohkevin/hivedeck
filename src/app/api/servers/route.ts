@@ -18,7 +18,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, hostname, tailscaleIp, port, apiKey } = body;
+    const { name, hostname, tailscaleIp, port, apiKey, skipHealthCheck } = body;
 
     if (!name || !tailscaleIp || !apiKey) {
       return NextResponse.json(
@@ -27,22 +27,35 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate connection to the agent
-    try {
-      const healthRes = await fetch(`http://${tailscaleIp}:${port || 8091}/health`, {
-        signal: AbortSignal.timeout(5000),
-      });
-      if (!healthRes.ok) {
+    // Check for duplicate tailscaleIp
+    const existing = await prisma.server.findUnique({
+      where: { tailscaleIp },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: "A server with this Tailscale IP already exists" },
+        { status: 400 }
+      );
+    }
+
+    // Validate connection to the agent (unless skipped)
+    if (!skipHealthCheck) {
+      try {
+        const healthRes = await fetch(`http://${tailscaleIp}:${port || 8091}/health`, {
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!healthRes.ok) {
+          return NextResponse.json(
+            { error: "Failed to connect to agent - server responded with error" },
+            { status: 400 }
+          );
+        }
+      } catch {
         return NextResponse.json(
-          { error: "Failed to connect to agent" },
+          { error: "Failed to connect to agent - check IP/hostname and port. Enable 'Skip connection test' if running in Docker." },
           { status: 400 }
         );
       }
-    } catch {
-      return NextResponse.json(
-        { error: "Failed to connect to agent - check IP and port" },
-        { status: 400 }
-      );
     }
 
     const server = await prisma.server.create({

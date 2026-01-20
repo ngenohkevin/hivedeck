@@ -26,6 +26,7 @@ import {
   ListTodo,
 } from "lucide-react";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function ServerDetailPage() {
   const params = useParams();
@@ -119,28 +120,30 @@ export default function ServerDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4 mb-4">
-            <Link href="/">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            </Link>
-            <div className="flex items-center gap-2">
-              <ServerIcon className="h-5 w-5" />
-              <h1 className="text-xl font-bold">{server.name}</h1>
-              <Badge variant="success">Online</Badge>
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Link href="/">
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </Link>
+              <div className="flex items-center gap-2">
+                <ServerIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <h1 className="text-lg sm:text-xl font-bold truncate max-w-[150px] sm:max-w-none">{server.name}</h1>
+                <Badge variant="success" className="hidden sm:inline-flex">Online</Badge>
+              </div>
             </div>
+            <ThemeToggle />
           </div>
 
-          <nav className="flex gap-2 overflow-x-auto pb-2">
+          <nav className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href}>
-                <Button variant="outline" size="sm">
-                  <item.icon className="h-4 w-4 mr-1" />
-                  {item.label}
+                <Button variant="outline" size="sm" className="h-8 whitespace-nowrap">
+                  <item.icon className="h-3.5 w-3.5 sm:mr-1.5" />
+                  <span className="hidden sm:inline">{item.label}</span>
                 </Button>
               </Link>
             ))}
