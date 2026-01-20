@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, Server } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   const servers = await prisma.server.findMany({
     where: { enabled: true },
