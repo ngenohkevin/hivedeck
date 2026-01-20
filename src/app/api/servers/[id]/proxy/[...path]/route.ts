@@ -68,7 +68,8 @@ async function proxyRequest(
     // Check if this is an SSE endpoint
     const contentType = response.headers.get("content-type");
     if (contentType?.includes("text/event-stream") || isSSE) {
-      // For SSE, stream the response directly
+      // For SSE, pass through the response body directly
+      // This works better with HTTP/2 and Cloudflare
       if (!response.body) {
         return NextResponse.json(
           { error: "No response body from agent" },
@@ -76,62 +77,14 @@ async function proxyRequest(
         );
       }
 
-      // Create a ReadableStream that passes through the SSE data
-      let controllerClosed = false;
-      const reader = response.body!.getReader();
-
-      const stream = new ReadableStream({
-        async start(controller) {
-          // Handle client disconnect
-          request.signal.addEventListener("abort", () => {
-            controllerClosed = true;
-            reader.cancel().catch(() => {});
-            try {
-              controller.close();
-            } catch {
-              // Controller already closed
-            }
-          });
-
-          try {
-            while (!controllerClosed) {
-              const { done, value } = await reader.read();
-              if (done) break;
-
-              // Pass through the SSE data
-              if (!controllerClosed) {
-                controller.enqueue(value);
-              }
-            }
-          } catch (error) {
-            // Only log if not a normal disconnect
-            if (!controllerClosed && !(error instanceof Error && error.name === "AbortError")) {
-              console.error("SSE stream error:", error);
-            }
-          } finally {
-            if (!controllerClosed) {
-              controllerClosed = true;
-              try {
-                controller.close();
-              } catch {
-                // Controller already closed
-              }
-            }
-            reader.releaseLock();
-          }
-        },
-        cancel() {
-          controllerClosed = true;
-          reader.cancel().catch(() => {});
-        },
-      });
-
-      return new Response(stream, {
+      // Return with SSE headers - don't use Connection header with HTTP/2
+      return new Response(response.body, {
+        status: 200,
         headers: {
           "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache, no-transform",
-          Connection: "keep-alive",
+          "Cache-Control": "no-cache, no-store, no-transform, must-revalidate",
           "X-Accel-Buffering": "no",
+          "X-Content-Type-Options": "nosniff",
         },
       });
     }
