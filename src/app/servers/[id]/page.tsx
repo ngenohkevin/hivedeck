@@ -344,7 +344,31 @@ export default function ServerDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                {/* Mobile view - cards */}
+                <div className="space-y-3 sm:hidden">
+                  {metrics.network.interfaces.map((iface) => (
+                    <div key={iface.name} className="p-3 rounded-lg border">
+                      <div className="font-medium mb-2">{iface.name}</div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Received: </span>
+                          {formatBytes(iface.bytes_recv)}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Sent: </span>
+                          {formatBytes(iface.bytes_sent)}
+                        </div>
+                      </div>
+                      {iface.addrs && iface.addrs.length > 0 && (
+                        <div className="text-xs text-muted-foreground mt-2 truncate">
+                          {iface.addrs.slice(0, 2).join(", ")}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {/* Desktop view - table */}
+                <div className="hidden sm:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-muted-foreground">
