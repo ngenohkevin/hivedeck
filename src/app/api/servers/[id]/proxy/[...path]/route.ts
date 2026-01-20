@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
+// Disable body parsing and set max duration for SSE
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 type RouteContext = {
   params: Promise<{ id: string; path: string[] }>;
 };
@@ -8,7 +12,7 @@ type RouteContext = {
 async function proxyRequest(
   request: NextRequest,
   context: RouteContext
-): Promise<NextResponse> {
+): Promise<NextResponse | Response> {
   const { id, path } = await context.params;
   const pathString = "/" + path.join("/");
 
@@ -30,16 +34,23 @@ async function proxyRequest(
     url.searchParams.set(key, value);
   });
 
+  // Check if this is an SSE request (events endpoint)
+  const isSSE = pathString.includes("/events");
+
   try {
     // Forward the request to the agent
     const headers: HeadersInit = {
       Authorization: `Bearer ${server.apiKey}`,
-      "Content-Type": "application/json",
     };
+
+    if (!isSSE) {
+      headers["Content-Type"] = "application/json";
+    }
 
     const fetchOptions: RequestInit = {
       method: request.method,
       headers,
+      cache: "no-store",
     };
 
     // Include body for POST/PUT/PATCH
@@ -54,16 +65,44 @@ async function proxyRequest(
 
     // Check if this is an SSE endpoint
     const contentType = response.headers.get("content-type");
-    if (contentType?.includes("text/event-stream")) {
-      // For SSE, we need to stream the response
-      const { readable, writable } = new TransformStream();
-      response.body?.pipeTo(writable);
+    if (contentType?.includes("text/event-stream") || isSSE) {
+      // For SSE, stream the response directly
+      if (!response.body) {
+        return NextResponse.json(
+          { error: "No response body from agent" },
+          { status: 502 }
+        );
+      }
 
-      return new NextResponse(readable, {
+      // Create a ReadableStream that passes through the SSE data
+      const stream = new ReadableStream({
+        async start(controller) {
+          const reader = response.body!.getReader();
+          const decoder = new TextDecoder();
+
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+
+              // Pass through the SSE data
+              controller.enqueue(value);
+            }
+          } catch (error) {
+            console.error("SSE stream error:", error);
+          } finally {
+            controller.close();
+            reader.releaseLock();
+          }
+        },
+      });
+
+      return new Response(stream, {
         headers: {
           "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
+          "Cache-Control": "no-cache, no-transform",
           Connection: "keep-alive",
+          "X-Accel-Buffering": "no",
         },
       });
     }
