@@ -18,38 +18,53 @@ export function ServerCardLive({ server }: ServerCardLiveProps) {
   const [isOnline, setIsOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
-    let mounted = true;
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
 
-    const fetchMetrics = async () => {
+    const connect = async () => {
+      // First fetch initial metrics
       try {
         const res = await fetch(`/api/servers/${server.id}/proxy/api/metrics`);
-        if (!mounted) return;
-
         if (res.ok) {
           const data = await res.json();
           setMetrics(data);
           setIsOnline(true);
         } else {
           setIsOnline(false);
+          return;
         }
       } catch {
-        if (mounted) {
-          setIsOnline(false);
-        }
+        setIsOnline(false);
+        return;
       }
+
+      // Then connect to SSE for real-time updates
+      eventSource = new EventSource(`/api/servers/${server.id}/proxy/api/events`);
+
+      eventSource.addEventListener("metrics", (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          setMetrics(data);
+          setIsOnline(true);
+        } catch (e) {
+          console.error("Failed to parse metrics:", e);
+        }
+      });
+
+      eventSource.onerror = () => {
+        setIsOnline(false);
+        eventSource?.close();
+        // Retry connection after 5 seconds
+        reconnectTimeout = setTimeout(connect, 5000);
+      };
     };
 
-    // Initial fetch
-    fetchMetrics();
-
-    // Poll every 3 seconds for near real-time updates
-    intervalId = setInterval(fetchMetrics, 3000);
+    connect();
 
     return () => {
-      mounted = false;
-      if (intervalId) {
-        clearInterval(intervalId);
+      eventSource?.close();
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
       }
     };
   }, [server.id]);
