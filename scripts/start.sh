@@ -1,9 +1,9 @@
 #!/bin/sh
 set -e
 
-# Run Prisma migrations using local binary
-echo "Running Prisma migrations..."
-node ./node_modules/prisma/build/index.js migrate deploy
+# Sync database schema with Prisma (creates tables if needed)
+echo "Syncing database schema..."
+node ./node_modules/prisma/build/index.js db push --accept-data-loss
 
 # Start the application
 echo "Starting application..."
