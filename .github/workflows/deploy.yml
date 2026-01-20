@@ -10,7 +10,6 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  NODE_VERSION: '22'
 
 jobs:
   build-and-deploy:
@@ -22,22 +21,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Test build locally
-        run: |
-          echo "Testing build locally to catch errors early"
-          npm run build
-        env:
-          NODE_ENV: production
 
       - name: Log in to GitHub Container Registry
         if: github.event_name != 'pull_request'
