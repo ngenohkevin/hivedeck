@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MetricsCard } from "@/components/dashboard/metrics-card";
-import { APIClient } from "@/lib/api";
-import { formatBytes, formatUptime } from "@/lib/utils";
+import { formatBytes } from "@/lib/utils";
 import type { Server, AllMetrics } from "@/types";
 import {
   ArrowLeft,
@@ -45,12 +44,10 @@ export default function ServerDetailPage() {
         const data = await res.json();
         setServer(data);
 
-        // Load initial metrics
-        const client = new APIClient(
-          `http://${data.tailscaleIp}:${data.port}`,
-          data.apiKey
-        );
-        const metricsData = await client.getMetrics();
+        // Load initial metrics via proxy
+        const metricsRes = await fetch(`/api/servers/${serverId}/proxy/api/metrics`);
+        if (!metricsRes.ok) throw new Error("Failed to load metrics");
+        const metricsData = await metricsRes.json();
         setMetrics(metricsData);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -65,18 +62,24 @@ export default function ServerDetailPage() {
   useEffect(() => {
     if (!server) return;
 
-    const client = new APIClient(
-      `http://${server.tailscaleIp}:${server.port}`,
-      server.apiKey
-    );
+    // Use SSE via proxy
+    const eventSource = new EventSource(`/api/servers/${serverId}/proxy/api/events`);
 
-    const cleanup = client.streamMetrics(
-      (data) => setMetrics(data),
-      () => setError("Connection lost")
-    );
+    eventSource.addEventListener("metrics", (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setMetrics(data);
+      } catch (e) {
+        console.error("Failed to parse metrics:", e);
+      }
+    });
 
-    return cleanup;
-  }, [server]);
+    eventSource.onerror = () => {
+      setError("Connection lost");
+    };
+
+    return () => eventSource.close();
+  }, [server, serverId]);
 
   if (isLoading) {
     return (
