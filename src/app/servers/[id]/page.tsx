@@ -23,6 +23,7 @@ import {
   Terminal,
   Folder,
   ListTodo,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -138,7 +139,14 @@ export default function ServerDetailPage() {
                 <Badge variant="success" className="hidden sm:inline-flex">Online</Badge>
               </div>
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <Link href={`/servers/${serverId}/edit`}>
+                <Button variant="outline" size="icon" className="h-9 w-9">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
+              <ThemeToggle />
+            </div>
           </div>
 
           <nav className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
