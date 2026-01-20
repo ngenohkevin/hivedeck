@@ -1,36 +1,17 @@
 import { prisma } from "@/lib/db";
-import { ServerCard } from "@/components/dashboard/server-card";
+import { ServerCardLive } from "@/components/dashboard/server-card-live";
 import { Button } from "@/components/ui/button";
 import { Plus, Server, Settings } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
-import type { AllMetrics } from "@/types";
 
 export const dynamic = "force-dynamic";
-
-async function fetchServerMetrics(server: { tailscaleIp: string; port: number; apiKey: string }): Promise<AllMetrics | null> {
-  try {
-    const res = await fetch(`http://${server.tailscaleIp}:${server.port}/api/metrics`, {
-      headers: { Authorization: `Bearer ${server.apiKey}` },
-      cache: "no-store",
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
 
 export default async function HomePage() {
   const servers = await prisma.server.findMany({
     where: { enabled: true },
     orderBy: { name: "asc" },
   });
-
-  // Fetch metrics for all servers in parallel
-  const metricsPromises = servers.map((server) => fetchServerMetrics(server));
-  const metricsResults = await Promise.all(metricsPromises);
 
   return (
     <div className="min-h-screen bg-background">
@@ -87,12 +68,10 @@ export default async function HomePage() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {servers.map((server, index) => (
-              <ServerCard
+            {servers.map((server) => (
+              <ServerCardLive
                 key={server.id}
                 server={server}
-                metrics={metricsResults[index] ?? undefined}
-                isOnline={metricsResults[index] !== null}
               />
             ))}
           </div>
