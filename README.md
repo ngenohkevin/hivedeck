@@ -2,6 +2,8 @@
 
 Server monitoring and management dashboard for Hivedeck agents.
 
+**Production URL:** https://hivedeck.iopulse.cloud
+
 ## Overview
 
 Hivedeck Dashboard is a Next.js application that provides:
@@ -48,12 +50,30 @@ Visit http://localhost:3000 to access the dashboard.
 
 ### Adding a Server
 
+**Step 1: Get the API Key from the Agent**
+
+If the agent is new (no API key configured):
+1. Open `http://<agent-ip>:8091/setup`
+2. Click "Generate API Key"
+3. Copy the key and click "Save"
+4. Restart the agent
+
+If the agent already has an API key:
+- Check the agent's `.env` file, or
+- Visit the settings page: `http://<agent-ip>:8091/settings?key=<existing-key>`
+
+**Step 2: Add Server to Dashboard**
+
 1. Click "Add Server" on the dashboard
 2. Enter server details:
-   - **Name**: Display name for the server
+   - **Name**: Display name (e.g., "Raspberry Pi")
+   - **Hostname**: Server hostname (e.g., "raspberrypi")
    - **Tailscale IP**: The server's Tailscale IP (e.g., `100.85.91.122`)
-   - **Port**: Agent port (default: `8091`)
-   - **API Key**: The API key configured in the agent's `.env`
+   - **Port**: Agent port (default: `8091`, or `443` for Tailscale Serve)
+   - **API Key**: The API key from Step 1
+3. Click "Add Server"
+
+The dashboard will automatically connect and start showing real-time metrics.
 
 ## Tech Stack
 
@@ -174,13 +194,39 @@ Required secrets:
 | `/api/servers/[id]` | PUT | Update server |
 | `/api/servers/[id]` | DELETE | Remove server |
 
-## Connecting to Agents
+## Architecture
+
+### API Proxy
+
+The dashboard proxies all agent requests through Next.js API routes:
+
+```
+Browser → Dashboard (iopulse.cloud) → Agent (Tailscale IP)
+```
+
+This solves:
+- Mixed content issues (HTTPS dashboard → HTTP agent)
+- CORS restrictions
+- API key security (keys stored server-side)
+
+Proxy route: `/api/servers/[id]/proxy/[...path]`
+
+### Real-time Updates (SSE)
+
+The dashboard uses Server-Sent Events for real-time metrics:
+- Agent streams metrics every 2 seconds via `/api/events`
+- Dashboard proxies SSE with proper headers (`X-Accel-Buffering: no`)
+- Traefik configured with `flushInterval=1ms` for SSE passthrough
+
+### Tailscale Connectivity
 
 The dashboard connects to Hivedeck agents via Tailscale. Ensure:
 
-1. Both dashboard and agent are on the same Tailscale network
-2. The agent is running and accessible
+1. Both dashboard server (iopulse) and agent are on the same Tailscale network
+2. The agent is running and accessible via Tailscale IP
 3. The API key matches the agent's configuration
+
+**Note:** When using Tailscale Serve (port 443), the dashboard uses HTTPS automatically.
 
 ## License
 
