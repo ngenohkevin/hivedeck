@@ -25,8 +25,10 @@ async function proxyRequest(
     return NextResponse.json({ error: "Server not found" }, { status: 404 });
   }
 
-  // Build agent URL
-  const agentUrl = `http://${server.tailscaleIp}:${server.port}${pathString}`;
+  // Build agent URL (use HTTPS for port 443, e.g., Tailscale Serve)
+  const protocol = server.port === 443 ? "https" : "http";
+  const portSuffix = server.port === 443 ? "" : `:${server.port}`;
+  const agentUrl = `${protocol}://${server.tailscaleIp}${portSuffix}${pathString}`;
   const url = new URL(agentUrl);
 
   // Forward query params
