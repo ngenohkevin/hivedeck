@@ -77,25 +77,52 @@ async function proxyRequest(
       }
 
       // Create a ReadableStream that passes through the SSE data
+      let controllerClosed = false;
+      const reader = response.body!.getReader();
+
       const stream = new ReadableStream({
         async start(controller) {
-          const reader = response.body!.getReader();
-          const decoder = new TextDecoder();
+          // Handle client disconnect
+          request.signal.addEventListener("abort", () => {
+            controllerClosed = true;
+            reader.cancel().catch(() => {});
+            try {
+              controller.close();
+            } catch {
+              // Controller already closed
+            }
+          });
 
           try {
-            while (true) {
+            while (!controllerClosed) {
               const { done, value } = await reader.read();
               if (done) break;
 
               // Pass through the SSE data
-              controller.enqueue(value);
+              if (!controllerClosed) {
+                controller.enqueue(value);
+              }
             }
           } catch (error) {
-            console.error("SSE stream error:", error);
+            // Only log if not a normal disconnect
+            if (!controllerClosed && !(error instanceof Error && error.name === "AbortError")) {
+              console.error("SSE stream error:", error);
+            }
           } finally {
-            controller.close();
+            if (!controllerClosed) {
+              controllerClosed = true;
+              try {
+                controller.close();
+              } catch {
+                // Controller already closed
+              }
+            }
             reader.releaseLock();
           }
+        },
+        cancel() {
+          controllerClosed = true;
+          reader.cancel().catch(() => {});
         },
       });
 
