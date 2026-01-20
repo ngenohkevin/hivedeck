@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { formatBytes, formatPercent } from "@/lib/utils";
-import { Server, Monitor, Clock, Cpu, MemoryStick, HardDrive } from "lucide-react";
+import { Server, Monitor, Clock, Cpu, MemoryStick, HardDrive, Thermometer } from "lucide-react";
 import type { Server as ServerType, AllMetrics } from "@/types";
 
 interface ServerCardProps {
@@ -73,6 +73,18 @@ export function ServerCard({ server, metrics, isOnline = false }: ServerCardProp
               <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2">
                 <Clock className="h-3 w-3" />
                 <span>Uptime: {metrics.host.uptime_human}</span>
+                {metrics.host.temperatures && metrics.host.temperatures[0] && (
+                  <>
+                    <span className="mx-1">•</span>
+                    <Thermometer className="h-3 w-3" />
+                    <span className={
+                      metrics.host.temperatures[0].temperature >= 80 ? "text-red-500" :
+                      metrics.host.temperatures[0].temperature >= 60 ? "text-yellow-500" : ""
+                    }>
+                      {metrics.host.temperatures[0].temperature.toFixed(0)}°C
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           ) : (

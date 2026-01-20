@@ -24,6 +24,7 @@ import {
   Folder,
   ListTodo,
   Settings,
+  Thermometer,
 } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -219,7 +220,7 @@ export default function ServerDetailPage() {
             </div>
 
             {/* Metrics Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
               <MetricsCard
                 title="CPU Usage"
                 value={metrics.cpu.usage_total}
@@ -244,13 +245,32 @@ export default function ServerDetailPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {metrics.cpu.load_avg_1.toFixed(2)}
+                    {(metrics.cpu.load_avg_1 ?? 0).toFixed(2)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {metrics.cpu.load_avg_5.toFixed(2)} / {metrics.cpu.load_avg_15.toFixed(2)}
+                    {(metrics.cpu.load_avg_5 ?? 0).toFixed(2)} / {(metrics.cpu.load_avg_15 ?? 0).toFixed(2)}
                   </p>
                 </CardContent>
               </Card>
+              {metrics.host.temperatures && metrics.host.temperatures.length > 0 && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Temperature</CardTitle>
+                    <Thermometer className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className={`text-2xl font-bold ${
+                      metrics.host.temperatures[0].temperature >= 80 ? "text-red-500" :
+                      metrics.host.temperatures[0].temperature >= 60 ? "text-yellow-500" : ""
+                    }`}>
+                      {metrics.host.temperatures[0].temperature.toFixed(1)}°C
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {metrics.host.temperatures[0].sensor_key}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Detailed Info */}
@@ -319,14 +339,14 @@ export default function ServerDetailPage() {
                         <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
                           <div
                             className={`h-full ${
-                              partition.used_percent >= 90 ? "bg-red-500" :
-                              partition.used_percent >= 70 ? "bg-yellow-500" : "bg-green-500"
+                              (partition.used_percent ?? 0) >= 90 ? "bg-red-500" :
+                              (partition.used_percent ?? 0) >= 70 ? "bg-yellow-500" : "bg-green-500"
                             }`}
-                            style={{ width: `${partition.used_percent}%` }}
+                            style={{ width: `${partition.used_percent ?? 0}%` }}
                           />
                         </div>
                         <span className="text-xs text-muted-foreground w-12 text-right">
-                          {partition.used_percent.toFixed(1)}%
+                          {(partition.used_percent ?? 0).toFixed(1)}%
                         </span>
                       </div>
                     </div>

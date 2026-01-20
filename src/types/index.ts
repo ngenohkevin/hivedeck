@@ -23,6 +23,11 @@ export interface ServerInfo {
 }
 
 // Metrics types
+export interface Temperature {
+  sensor_key: string;
+  temperature: number;
+}
+
 export interface HostInfo {
   hostname: string;
   os: string;
@@ -34,6 +39,7 @@ export interface HostInfo {
   uptime_human: string;
   boot_time: number;
   procs: number;
+  temperatures?: Temperature[];
 }
 
 export interface CPUInfo {

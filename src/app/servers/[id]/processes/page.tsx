@@ -116,12 +116,12 @@ export default function ProcessesPage() {
                           {proc.username}
                         </td>
                         <td className="py-2 px-2 text-right">
-                          <span className={proc.cpu_percent > 50 ? "text-red-500" : ""}>
-                            {proc.cpu_percent.toFixed(1)}%
+                          <span className={(proc.cpu_percent ?? 0) > 50 ? "text-red-500" : ""}>
+                            {(proc.cpu_percent ?? 0).toFixed(1)}%
                           </span>
                         </td>
                         <td className="py-2 px-2 text-right">
-                          {proc.memory_percent.toFixed(1)}%
+                          {(proc.memory_percent ?? 0).toFixed(1)}%
                           <span className="text-muted-foreground text-xs ml-1 hidden sm:inline">
                             ({formatBytes(proc.memory_rss)})
                           </span>
