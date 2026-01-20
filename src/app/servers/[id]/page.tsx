@@ -25,6 +25,7 @@ import {
   ListTodo,
   Settings,
   Thermometer,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -37,6 +38,7 @@ export default function ServerDetailPage() {
   const [metrics, setMetrics] = useState<AllMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     async function loadServer() {
@@ -98,17 +100,50 @@ export default function ServerDetailPage() {
     );
   }
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(`/api/servers/${serverId}`);
+      if (!res.ok) throw new Error("Failed to load server");
+      const data = await res.json();
+      setServer(data);
+
+      const metricsRes = await fetch(`/api/servers/${serverId}/proxy/api/metrics`);
+      if (!metricsRes.ok) throw new Error("Failed to load metrics");
+      const metricsData = await metricsRes.json();
+      setMetrics(metricsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
   if (error || !server) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <p className="text-red-500">{error || "Server not found"}</p>
-          <Link href="/">
-            <Button variant="outline" className="mt-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <Button
+              variant="default"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+              {isRefreshing ? "Reconnecting..." : "Retry Connection"}
             </Button>
-          </Link>
+            <Link href="/">
+              <Button variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Dashboard
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
