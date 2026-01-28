@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Box, RefreshCw, Play, Square, RotateCcw } from "lucide-react";
+import { ArrowLeft, Box, RefreshCw, Play, Square, RotateCcw, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 interface Service {
   name: string;
@@ -26,6 +27,7 @@ export default function ServicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const loadServices = async () => {
     try {
@@ -74,6 +76,36 @@ export default function ServicesPage() {
     return <Badge variant="outline">{service.active_state}</Badge>;
   };
 
+  // Sort: active first, then failed, then inactive, then others
+  // Filter by search term
+  const filteredServices = useMemo(() => {
+    const stateOrder: Record<string, number> = {
+      active: 0,
+      failed: 1,
+      activating: 2,
+      deactivating: 3,
+      inactive: 4,
+    };
+
+    return services
+      .filter((s) => {
+        if (!search) return true;
+        const searchLower = search.toLowerCase();
+        return (
+          s.name.toLowerCase().includes(searchLower) ||
+          s.description.toLowerCase().includes(searchLower)
+        );
+      })
+      .sort((a, b) => {
+        const orderA = stateOrder[a.active_state] ?? 5;
+        const orderB = stateOrder[b.active_state] ?? 5;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name);
+      });
+  }, [services, search]);
+
+  const activeCount = services.filter((s) => s.active_state === "active").length;
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -115,12 +147,28 @@ export default function ServicesPage() {
         ) : (
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">
-                {services.length} Systemd Services
-              </CardTitle>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <CardTitle className="text-lg">
+                  {activeCount} Active / {services.length} Total Services
+                </CardTitle>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search services..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {services.map((service) => (
+              {filteredServices.length === 0 && search && (
+                <p className="text-center text-muted-foreground py-8">
+                  No services match &quot;{search}&quot;
+                </p>
+              )}
+              {filteredServices.map((service) => (
                 <div
                   key={service.name}
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border gap-2"
