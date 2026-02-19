@@ -390,14 +390,25 @@ export default function ServerDetailPage() {
                     Memory
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total</span>
-                    <span>{formatBytes(metrics.memory.total)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Used</span>
-                    <span>{formatBytes(metrics.memory.used)}</span>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">
+                        {formatBytes(metrics.memory.used)} / {formatBytes(metrics.memory.total)}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {metrics.memory.used_percent.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${
+                          metrics.memory.used_percent >= 90 ? "bg-red-500" :
+                          metrics.memory.used_percent >= 70 ? "bg-yellow-500" : "bg-green-500"
+                        }`}
+                        style={{ width: `${metrics.memory.used_percent}%` }}
+                      />
+                    </div>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Available</span>
