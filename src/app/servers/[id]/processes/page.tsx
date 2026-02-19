@@ -15,8 +15,8 @@ interface Process {
   name: string;
   username: string;
   cpu_percent: number;
-  memory_percent: number;
-  memory_rss: number;
+  mem_percent: number;
+  mem_rss: number;
   status: string;
   cmdline: string;
 }
@@ -121,9 +121,9 @@ export default function ProcessesPage() {
                           </span>
                         </td>
                         <td className="py-2 px-2 text-right">
-                          {(proc.memory_percent ?? 0).toFixed(1)}%
+                          {(proc.mem_percent ?? 0).toFixed(1)}%
                           <span className="text-muted-foreground text-xs ml-1 hidden sm:inline">
-                            ({formatBytes(proc.memory_rss)})
+                            ({formatBytes(proc.mem_rss)})
                           </span>
                         </td>
                         <td className="py-2 px-2 hidden md:table-cell">
