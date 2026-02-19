@@ -109,7 +109,7 @@ export default function ProcessesPage() {
                     {processes.map((proc) => (
                       <tr key={proc.pid} className="border-b hover:bg-muted/50">
                         <td className="py-2 px-2 font-mono text-xs">{proc.pid}</td>
-                        <td className="py-2 px-2 font-medium truncate max-w-[150px]" title={proc.name}>
+                        <td className="py-2 px-2 font-medium truncate max-w-[120px] sm:max-w-[250px]" title={proc.name}>
                           {proc.name}
                         </td>
                         <td className="py-2 px-2 hidden sm:table-cell text-muted-foreground">

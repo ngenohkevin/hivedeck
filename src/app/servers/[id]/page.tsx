@@ -233,7 +233,7 @@ export default function ServerDetailPage() {
               </Link>
               <div className="flex items-center gap-2">
                 <ServerIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-                <h1 className="text-lg sm:text-xl font-bold truncate max-w-[150px] sm:max-w-none">{server.name}</h1>
+                <h1 className="text-lg sm:text-xl font-bold truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">{server.name}</h1>
                 <Badge variant="success" className="hidden sm:inline-flex">Online</Badge>
               </div>
             </div>
