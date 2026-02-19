@@ -390,44 +390,87 @@ export default function ServerDetailPage() {
                     Memory
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3 text-sm">
+                <CardContent className="space-y-4 text-sm">
+                  {/* Used */}
                   <div className="space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">
-                        {formatBytes(metrics.memory.used)} / {formatBytes(metrics.memory.total)}
-                      </span>
-                      <span className="text-muted-foreground">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Used</span>
+                      <span>{formatBytes(metrics.memory.used)} / {formatBytes(metrics.memory.total)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-500 ${
+                            metrics.memory.used_percent >= 90 ? "bg-red-500" :
+                            metrics.memory.used_percent >= 70 ? "bg-yellow-500" : "bg-green-500"
+                          }`}
+                          style={{ width: `${metrics.memory.used_percent}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-12 text-right">
                         {metrics.memory.used_percent.toFixed(1)}%
                       </span>
                     </div>
-                    <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-500 ${
-                          metrics.memory.used_percent >= 90 ? "bg-red-500" :
-                          metrics.memory.used_percent >= 70 ? "bg-yellow-500" : "bg-green-500"
-                        }`}
-                        style={{ width: `${metrics.memory.used_percent}%` }}
-                      />
+                  </div>
+                  {/* Available */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Available</span>
+                      <span>{formatBytes(metrics.memory.available)} / {formatBytes(metrics.memory.total)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-500 bg-blue-500"
+                          style={{ width: `${(metrics.memory.available / metrics.memory.total * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-12 text-right">
+                        {(metrics.memory.available / metrics.memory.total * 100).toFixed(1)}%
+                      </span>
                     </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Available</span>
-                    <span>{formatBytes(metrics.memory.available)}</span>
+                  {/* Cached */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Cached</span>
+                      <span>{formatBytes(metrics.memory.cached)} / {formatBytes(metrics.memory.total)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className="h-full transition-all duration-500 bg-purple-500"
+                          style={{ width: `${(metrics.memory.cached / metrics.memory.total * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-12 text-right">
+                        {(metrics.memory.cached / metrics.memory.total * 100).toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Cached</span>
-                    <span>{formatBytes(metrics.memory.cached)}</span>
-                  </div>
+                  {/* Swap */}
                   {metrics.memory.swap_total > 0 && (
                     <>
-                      <hr className="my-2" />
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Swap Total</span>
-                        <span>{formatBytes(metrics.memory.swap_total)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Swap Used</span>
-                        <span>{formatBytes(metrics.memory.swap_used)}</span>
+                      <hr className="my-1" />
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Swap</span>
+                          <span>{formatBytes(metrics.memory.swap_used)} / {formatBytes(metrics.memory.swap_total)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-500 ${
+                                metrics.memory.swap_percent >= 80 ? "bg-red-500" :
+                                metrics.memory.swap_percent >= 50 ? "bg-yellow-500" : "bg-orange-500"
+                              }`}
+                              style={{ width: `${metrics.memory.swap_percent}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground w-12 text-right">
+                            {metrics.memory.swap_percent.toFixed(1)}%
+                          </span>
+                        </div>
                       </div>
                     </>
                   )}
